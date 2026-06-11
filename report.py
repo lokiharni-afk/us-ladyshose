@@ -6,15 +6,17 @@ from collections import Counter
 from typing import Any, Iterable
 
 from analyzer import TREND_WORDS
-from score import hot_level, opportunity_level
+from score import hot_level, opportunity_level, parse_number
 
 FOLLOW_DIRECTIONS = [
-    ("recovery", "Recovery Slides 恢复拖鞋"),
-    ("cloud", "Cloud Slides 云朵拖鞋"),
-    ("orthopedic", "Orthopedic Sandals 足弓支撑凉鞋"),
-    ("platform", "Platform Sandals 厚底凉鞋"),
-    ("beach", "Beach Flip Flops 沙滩人字拖"),
+    ("Recovery Slides 恢复拖鞋", ("recovery",), "recovery slides"),
+    ("Orthopedic Sandals 足弓支撑凉鞋", ("orthopedic", "arch support"), "orthopedic sandals"),
+    ("Cloud Slides 云朵拖鞋", ("cloud", "cloud slides"), "cloud slides"),
+    ("Platform Sandals 厚底凉鞋", ("platform",), "platform sandals"),
+    ("Beach Sandals 沙滩凉鞋", ("beach", "flip flops"), "beach sandals"),
 ]
+
+BRAND_WORDS = ("Crocs", "OOFOS", "Skechers", "Clarks", "REEF", "Amazon Essentials")
 
 
 def _table(rows: list[dict[str, Any]], limit: int = 10) -> str:
@@ -62,16 +64,93 @@ def _opportunity_table(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _top_rows(rows: list[dict[str, Any]], limit: int = 20) -> list[dict[str, Any]]:
+    return sorted(rows, key=lambda row: float(row.get("hot_score") or 0), reverse=True)[:limit]
+
+
+def _temu_price_range(price: Any) -> str:
+    value = parse_number(price)
+    if value is None:
+        return "价格缺失，需人工判断"
+    if value > 30:
+        return "9.99-19.99美元"
+    if value >= 15:
+        return "7.99-14.99美元"
+    return "谨慎跟款"
+
+
+def _direction_price_range(matches: list[dict[str, Any]]) -> str:
+    prices = [
+        float(value)
+        for row in matches
+        if row.get("source") == "amazon_us"
+        if (value := parse_number(row.get("price"))) is not None
+    ]
+    if not prices:
+        return "9.99-19.99美元（待价格验证）"
+    return _temu_price_range(sum(prices) / len(prices))
+
+
+def _direction_risk(matches: list[dict[str, Any]]) -> str:
+    titles = " ".join(str(row.get("title") or "").lower() for row in matches)
+    if any(brand.lower() in titles for brand in BRAND_WORDS):
+        return "高"
+    if not matches:
+        return "高"
+    top_score = max(float(row.get("hot_score") or 0) for row in matches)
+    return "低" if top_score >= 85 else "中" if top_score >= 70 else "高"
+
+
 def _follow_directions(rows: list[dict[str, Any]]) -> str:
-    if not rows:
-        return "今日有效数据不足，暂无法形成跟款方向。"
-    scored = []
-    for keyword, label in FOLLOW_DIRECTIONS:
-        matches = [row for row in rows if keyword in str(row.get("title") or "").lower()]
-        signal = sum(float(row.get("hot_score") or 0) for row in matches)
-        scored.append((len(matches), signal, label))
-    ranked = sorted(scored, key=lambda item: (item[0], item[1]), reverse=True)
-    return "\n".join(f"{index}. {label}" for index, (_, _, label) in enumerate(ranked[:5], 1))
+    top_rows = _top_rows(rows)
+    directions = []
+    for name, keywords, english_keyword in FOLLOW_DIRECTIONS:
+        matches = [
+            row for row in top_rows
+            if any(keyword in str(row.get("title") or "").lower() for keyword in keywords)
+        ]
+        top_score = max((float(row.get("hot_score") or 0) for row in matches), default=0)
+        sources = len({str(row.get("source") or "") for row in matches})
+        if matches:
+            reason = f"Top20中出现{len(matches)}条，最高爆款分{top_score:g}，覆盖{sources}个平台"
+        else:
+            reason = "当前Top20信号较弱，作为美国女鞋常青方向持续观察"
+        directions.append((
+            len(matches),
+            sum(float(row.get("hot_score") or 0) for row in matches),
+            name,
+            english_keyword,
+            reason,
+            _direction_price_range(matches),
+            _direction_risk(matches),
+        ))
+    directions.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    lines = [
+        "| 方向名称 | 英文关键词 | 推荐原因 | 建议售价区间 | 风险等级 |",
+        "|---|---|---|---|---|",
+    ]
+    for _, _, name, keyword, reason, price_range, risk in directions:
+        lines.append(f"| {name} | `{keyword}` | {reason} | {price_range} | {risk} |")
+    return "\n".join(lines) + "\n"
+
+
+def _temu_opportunity_table(rows: list[dict[str, Any]]) -> str:
+    amazon_rows = [row for row in _top_rows(rows) if row.get("source") == "amazon_us"]
+    if not amazon_rows:
+        return "Top20 中暂无 Amazon 商品，今日无法判断 Temu 跟款机会。\n"
+    lines = [
+        "| Amazon 商品 | Amazon价格 | 品牌词 | Temu机会 | 推荐Temu售价 |",
+        "|---|---:|---|---|---|",
+    ]
+    for row in amazon_rows:
+        title = str(row.get("title") or "无标题").replace("|", " ")
+        title_lower = title.lower()
+        brand = next((brand for brand in BRAND_WORDS if brand.lower() in title_lower), None)
+        price = str(row.get("price") or "-").replace("|", " ")
+        opportunity = "不建议" if brand else "高"
+        recommended_price = "不适用" if brand else _temu_price_range(row.get("price"))
+        lines.append(f"| {title} | {price} | {brand or '-'} | {opportunity} | {recommended_price} |")
+    return "\n".join(lines) + "\n"
 
 
 def _level_summary(rows: list[dict[str, Any]]) -> str:
@@ -113,6 +192,10 @@ def build_report(run_date: str, rows: list[dict[str, Any]], warnings: list[str] 
 ## 今日建议跟款方向
 
 {_follow_directions(rows)}
+
+## Temu 跟款机会判断
+
+{_temu_opportunity_table(rows)}
 
 ## 风险提醒
 

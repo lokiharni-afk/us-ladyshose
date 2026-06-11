@@ -31,7 +31,14 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 - `data/raw_data.csv`：历史原始数据与评分，按日期、平台和链接去重
 - `reports/YYYY-MM-DD.md`：每日中文爆款日报
 
-日报包含今日美国女鞋趋势、TikTok 热度趋势、Amazon 验证款、Temu 低价跟款机会、Top 20 爆款机会榜、今日建议跟款方向和风险提醒。TikTok 当日无有效数据时，日报会明确提示页面反爬、地区限制、选择器失效或需要登录等可能原因。
+日报包含今日美国女鞋趋势、TikTok 热度趋势、Amazon 验证款、Temu 低价跟款机会、Top 20 爆款机会榜、今日建议跟款方向、Temu 跟款机会判断和风险提醒。TikTok 当日无有效数据时，日报会明确提示页面反爬、地区限制、选择器失效或需要登录等可能原因。
+
+### 日报选品建议
+
+- 今日建议跟款方向基于 Top 20 爆款记录，至少输出 Recovery Slides、Orthopedic Sandals、Cloud Slides、Platform Sandals 和 Beach Sandals 五个方向。
+- 每个方向展示英文关键词、推荐原因、建议售价区间和风险等级。
+- Temu 跟款机会判断会识别 Crocs、OOFOS、Skechers、Clarks、REEF 和 Amazon Essentials 等品牌词；命中品牌词时标记为“不建议”。
+- 非品牌 Amazon 商品按价格给出 Temu 建议：高于 30 美元建议 9.99-19.99 美元，15-30 美元建议 7.99-14.99 美元，低于 15 美元标记为谨慎跟款。
 
 ## 本地运行
 

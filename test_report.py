@@ -1,0 +1,88 @@
+from report import build_report
+
+
+def test_report_contains_opportunity_table_and_recommendation_sections():
+    rows = [
+        {
+            "source": "tiktok_us", "title": "Cloud slides summer trend", "price": None,
+            "hot_score": 88, "reason": "播放量高；标题包含 cloud slides",
+            "product_url": "https://tiktok.example/1",
+        },
+        {
+            "source": "amazon_us", "title": "Orthopedic sandals with arch support", "price": "$29.99",
+            "hot_score": 82, "reason": "排名靠前；标题包含 orthopedic",
+            "product_url": "https://amazon.example/1",
+        },
+    ]
+
+    text = build_report("2026-06-11", rows, [])
+
+    assert "## Top 20 爆款机会榜" in text
+    assert "## 今日建议跟款方向" in text
+    assert "S级爆款：0 条" in text
+    assert "A级爆款：2 条" in text
+    assert "| 排名 | 来源 | 标题 | 价格 | 爆款分 | 爆款等级 | 机会等级 | 爆款原因 | 链接 |" in text
+    assert "A级爆款" in text
+    assert "立即跟款" in text
+    assert "重点观察" in text
+    assert "Cloud Slides 云朵拖鞋" in text
+    assert "Orthopedic Sandals 足弓支撑凉鞋" in text
+    assert "| 方向名称 | 英文关键词 | 推荐原因 | 建议售价区间 | 风险等级 |" in text
+    assert "Recovery Slides" in text
+    assert "Platform Sandals" in text
+    assert "Beach Sandals" in text
+
+
+def test_report_builds_temu_opportunity_from_brand_and_amazon_price():
+    rows = [
+        {
+            "source": "amazon_us",
+            "title": "Crocs Cloud Slides",
+            "price": "$39.99",
+            "hot_score": 95,
+            "reason": "排名靠前",
+            "product_url": "https://amazon.example/branded",
+        },
+        {
+            "source": "amazon_us",
+            "title": "Generic Orthopedic Sandals",
+            "price": "$22.99",
+            "hot_score": 90,
+            "reason": "排名靠前",
+            "product_url": "https://amazon.example/generic",
+        },
+        {
+            "source": "amazon_us",
+            "title": "Generic Beach Sandals",
+            "price": "$12.99",
+            "hot_score": 85,
+            "reason": "排名靠前",
+            "product_url": "https://amazon.example/cheap",
+        },
+        {
+            "source": "amazon_us",
+            "title": "Generic Recovery Slides",
+            "price": "$45.00",
+            "hot_score": 80,
+            "reason": "排名靠前",
+            "product_url": "https://amazon.example/premium",
+        },
+    ]
+
+    text = build_report("2026-06-12", rows, [])
+
+    assert "## Temu 跟款机会判断" in text
+    assert "| Amazon 商品 | Amazon价格 | 品牌词 | Temu机会 | 推荐Temu售价 |" in text
+    assert "Crocs Cloud Slides" in text
+    assert "Crocs | 不建议" in text
+    assert "Generic Orthopedic Sandals" in text
+    assert "高 | 7.99-14.99美元" in text
+    assert "Generic Beach Sandals" in text
+    assert "高 | 谨慎跟款" in text
+    assert "Generic Recovery Slides" in text
+    assert "高 | 9.99-19.99美元" in text
+
+
+def test_report_explains_when_tiktok_has_no_data():
+    text = build_report("2026-06-11", [], [])
+    assert "TikTok 今日未采集到有效数据，可能原因：页面反爬、地区限制、选择器失效或需要登录。" in text
