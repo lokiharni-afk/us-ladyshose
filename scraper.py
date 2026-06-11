@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from typing import Any, Callable
 from urllib.parse import quote_plus, urljoin
@@ -16,8 +17,19 @@ AMAZON_TASKS = [
     ("new_releases", "New Releases Women Sandals", "https://www.amazon.com/gp/new-releases/fashion/679425011"),
 ]
 AMAZON_SEARCHES = ["women summer slippers", "women slides", "platform sandals women"]
-TIKTOK_SEARCHES = ["summer slippers", "platform slides", "women sandals", "cloud slides"]
+TIKTOK_SEARCHES = [
+    "women sandals",
+    "cloud slides",
+    "platform sandals",
+    "orthopedic sandals",
+    "recovery slides",
+    "flip flops women",
+    "summer slippers women",
+    "beach sandals women",
+]
 TEMU_SEARCHES = ["women summer slippers", "women slides", "platform sandals women", "cloud slides", "women sandals"]
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _text(node: Tag | None, selectors: list[str]) -> str | None:
@@ -64,7 +76,7 @@ def parse_amazon_html(html: str, run_date: str, list_type: str, keyword: str, li
     return rows
 
 
-def parse_tiktok_html(html: str, run_date: str, keyword: str, limit: int = 50) -> list[dict[str, Any]]:
+def parse_tiktok_html(html: str, run_date: str, keyword: str, limit: int = 20) -> list[dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
     cards = soup.select("[data-e2e='search-video-item'], [data-e2e='search_top-item']")
     rows = []
@@ -74,12 +86,14 @@ def parse_tiktok_html(html: str, run_date: str, keyword: str, limit: int = 50) -
         if not title or not href:
             continue
         rows.append({
-            "date": run_date, "source": "tiktok", "data_type": "video", "list_type": "search",
+            "date": run_date, "source": "tiktok_us", "data_type": "trend_video", "list_type": "keyword_search",
             "keyword": keyword, "rank": len(rows) + 1, "title": title,
+            "price": None, "rating": None, "review_count": None,
             "likes": _text(card, ["[data-e2e='like-count']"]),
             "comments": _text(card, ["[data-e2e='comment-count']"]),
             "views": _text(card, ["[data-e2e='video-views']", "[data-e2e='search-card-video-views']"]),
             "published_at": _text(card, ["time"]),
+            "competition_count": None,
             "product_url": urljoin("https://www.tiktok.com", href),
             "image_url": _attr(card, ["img"], "src"),
         })
@@ -156,7 +170,7 @@ async def collect_all(run_date: str) -> tuple[list[dict[str, Any]], list[str]]:
             amazon_tasks.append((f"Amazon {keyword}", _load_and_parse(context, url, parse_amazon_html, (run_date, "search", keyword, 50), semaphore)))
         for keyword in TIKTOK_SEARCHES:
             url = f"https://www.tiktok.com/search?q={quote_plus(keyword)}"
-            tiktok_tasks.append((f"TikTok {keyword}", _load_and_parse(context, url, parse_tiktok_html, (run_date, keyword, 50), semaphore)))
+            tiktok_tasks.append((f"TikTok {keyword}", _load_and_parse(context, url, parse_tiktok_html, (run_date, keyword, 20), semaphore)))
         for keyword in TEMU_SEARCHES:
             url = f"https://www.temu.com/search_result.html?search_key={quote_plus(keyword)}"
             temu_tasks.append((f"Temu {keyword}", _load_and_parse(context, url, parse_temu_html, (run_date, keyword, 50), semaphore)))
@@ -165,9 +179,13 @@ async def collect_all(run_date: str) -> tuple[list[dict[str, Any]], list[str]]:
             results = await asyncio.gather(*(task for _, task in tasks), return_exceptions=True)
             for (label, _), result in zip(tasks, results):
                 if isinstance(result, Exception):
-                    warnings.append(f"{label}：{result}")
+                    message = f"{label}：采集失败，{result}"
+                    LOGGER.warning(message)
+                    warnings.append(message)
                 elif not result:
-                    warnings.append(f"{label}：页面未解析到有效记录，可能是页面结构变化或访问受限")
+                    message = f"{label}：页面未解析到有效记录，可能是页面结构变化、访问受限或需要登录"
+                    LOGGER.warning(message)
+                    warnings.append(message)
                 else:
                     rows.extend(result)
         await context.close()

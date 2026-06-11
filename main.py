@@ -56,11 +56,14 @@ async def run() -> None:
     run_date = os.getenv("RUN_DATE") or datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
     rows, warnings = await collect_all(run_date)
     analyzed = analyze_rows(rows)
-    history = merge_history(_read_history(), analyzed)
+    history = analyze_rows(merge_history(_read_history(), rows))
     _write_history(history)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     (REPORTS_DIR / f"{run_date}.md").write_text(build_report(run_date, analyzed, warnings), encoding="utf-8")
-    print(f"Collected {len(analyzed)} rows; wrote {DATA_PATH} and reports/{run_date}.md")
+    amazon_count = sum(row.get("source") == "amazon_us" for row in analyzed)
+    tiktok_count = sum(row.get("source") == "tiktok_us" for row in analyzed)
+    print(f"Collected Amazon: {amazon_count}, TikTok: {tiktok_count}, total: {len(analyzed)}")
+    print(f"Wrote {DATA_PATH} and reports/{run_date}.md")
 
 
 if __name__ == "__main__":
