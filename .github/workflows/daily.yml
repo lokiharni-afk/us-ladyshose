@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 1 * * *
 
 jobs:
   monitor:
@@ -22,6 +22,7 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
+          python -m playwright install chromium
 
       - name: Run Monitor
         run: |
