@@ -1,4 +1,22 @@
-from scraper import TIKTOK_SEARCHES, parse_amazon_html, parse_temu_html, parse_tiktok_html
+from scraper import TIKTOK_SEARCHES, parse_amazon_html, parse_temu_html, parse_tiktok_html, select_top20_amazon
+
+
+def test_select_top20_amazon_filters_before_limiting():
+    rows = [
+        {"source": "tiktok_us", "hot_score": 100 - rank, "product_url": f"https://tiktok/{rank}"}
+        for rank in range(20)
+    ]
+    rows.extend(
+        [
+            {"source": "amazon_us", "hot_score": 70 - rank, "product_url": f"https://amazon/{rank}"}
+            for rank in range(25)
+        ]
+    )
+
+    selected = select_top20_amazon(rows)
+
+    assert len(selected) == 20
+    assert all(row["source"] == "amazon_us" for row in selected)
 
 
 def test_parse_amazon_html_extracts_product():
@@ -37,3 +55,16 @@ def test_parse_temu_html_records_competition_count():
     rows = parse_temu_html(html, "2026-06-11", "platform slides", 50)
     assert rows[0]["competition_count"] == 1
     assert rows[0]["source"] == "temu_us"
+
+
+def test_select_top20_amazon_only_returns_amazon_products_in_overall_top20():
+    rows = [
+        {"source": "amazon_us", "hot_score": 90, "product_url": "https://amazon.com/dp/B000000001"},
+        {"source": "tiktok_us", "hot_score": 95, "product_url": "https://tiktok.com/video/1"},
+        {"source": "amazon_us", "hot_score": 80, "product_url": ""},
+    ]
+
+    selected = select_top20_amazon(rows)
+
+    assert len(selected) == 1
+    assert selected[0]["hot_score"] == 90

@@ -1,5 +1,24 @@
 from analyzer import analyze_rows, parse_number
-from score import hot_level, opportunity_level
+import pytest
+
+from score import extract_brand, format_price_cny, hot_level, opportunity_level, price_to_usd
+
+
+def test_price_is_saved_as_cny_but_scored_by_usd_equivalent():
+    assert format_price_cny("SGD 30.90") == "¥163.77"
+    assert price_to_usd("¥143.93") == pytest.approx(19.99, abs=0.01)
+
+    row = analyze_rows([
+        {
+            "source": "amazon_us",
+            "rank": 60,
+            "title": "Basic sandals",
+            "price": "$19.99",
+        }
+    ])[0]
+
+    assert row["price"] == "¥143.93"
+    assert "价格处于人民币等值¥57.60-¥180.00黄金区间" in row["reason"]
 
 
 def test_parse_number_handles_social_suffixes_commas_and_empty_values():
@@ -25,7 +44,7 @@ def test_amazon_score_uses_required_100_point_model_and_chinese_reason():
     assert row["hot_score"] == 100
     assert "排名靠前" in row["reason"]
     assert "评论数高" in row["reason"]
-    assert "价格处于8-25美元黄金区间" in row["reason"]
+    assert "价格处于人民币等值¥57.60-¥180.00黄金区间" in row["reason"]
     assert "recovery" in row["reason"]
     assert "comfort" in row["reason"]
     assert "arch support" in row["reason"]
@@ -90,3 +109,28 @@ def test_hot_levels_follow_new_thresholds():
     assert hot_level(70) == "B级爆款"
     assert hot_level(60) == "C级观察"
     assert hot_level(59.99) == "忽略"
+
+
+def test_extract_brand_uses_known_brand_or_first_meaningful_word():
+    assert extract_brand("Crocs Women's Cloud Slides") == "crocs"
+    assert extract_brand("CloudStep Womens Recovery Slides") == "cloudstep"
+
+
+def test_amazon_score_uses_review_insight_bonus_and_penalty():
+    positive = analyze_rows([{
+        "source": "amazon_us",
+        "title": "Basic sandals",
+        "review_positive_count": 5,
+        "review_negative_count": 0,
+    }])[0]
+    negative = analyze_rows([{
+        "source": "amazon_us",
+        "title": "Basic sandals",
+        "review_positive_count": 0,
+        "review_negative_count": 5,
+    }])[0]
+
+    assert positive["hot_score"] == 10
+    assert "评价正面信号强" in positive["reason"]
+    assert negative["hot_score"] == 0
+    assert "评价负面风险高" in negative["reason"]

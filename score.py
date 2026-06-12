@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 from typing import Any
 
@@ -31,6 +32,8 @@ TIKTOK_KEYWORDS = {
 
 KNOWN_BRANDS = ("Amazon Essentials", "CloudStep", "Crocs", "OOFOS", "Skechers", "Clarks", "REEF")
 BRAND_STOP_WORDS = {"women", "womens", "woman", "ladies", "men", "mens", "unisex", "generic"}
+USD_CNY_RATE = float(os.getenv("USD_CNY_RATE", "7.20"))
+SGD_CNY_RATE = float(os.getenv("SGD_CNY_RATE", "5.30"))
 
 
 def parse_number(value: Any) -> float | int | None:
@@ -45,6 +48,30 @@ def parse_number(value: Any) -> float | int | None:
     number = float(match.group(1))
     number *= {"": 1, "K": 1_000, "M": 1_000_000, "B": 1_000_000_000}[match.group(2)]
     return int(number) if number.is_integer() else number
+
+
+def price_to_cny(value: Any) -> float | None:
+    number = parse_number(value)
+    if number is None:
+        return None
+    text = str(value or "").strip().upper()
+    if "SGD" in text or "S$" in text:
+        return float(number) * SGD_CNY_RATE
+    if "CNY" in text or "RMB" in text or "¥" in text or "￥" in text:
+        return float(number)
+    if "USD" in text or "$" in text:
+        return float(number) * USD_CNY_RATE
+    return float(number) * USD_CNY_RATE
+
+
+def price_to_usd(value: Any) -> float | None:
+    cny = price_to_cny(value)
+    return cny / USD_CNY_RATE if cny is not None else None
+
+
+def format_price_cny(value: Any) -> str | None:
+    cny = price_to_cny(value)
+    return f"¥{cny:.2f}" if cny is not None else None
 
 
 def extract_brand(title: Any) -> str:
@@ -121,20 +148,20 @@ def score_amazon(row: dict[str, Any]) -> tuple[int, str]:
             score += 5
             reasons.append("评论数达到50以上")
 
-    price = parse_number(row.get("price"))
+    price = price_to_usd(row.get("price"))
     if price is not None:
         if 8 <= price <= 25:
             score += 15
-            reasons.append("价格处于8-25美元黄金区间")
+            reasons.append("价格处于人民币等值¥57.60-¥180.00黄金区间")
         elif 25 < price <= 40:
             score += 10
-            reasons.append("价格处于25-40美元区间")
+            reasons.append("价格处于人民币等值¥180.00-¥288.00区间")
         elif price < 8:
             score += 5
-            reasons.append("价格低于8美元")
+            reasons.append("价格低于人民币等值¥57.60")
         else:
             score += 3
-            reasons.append("价格高于40美元")
+            reasons.append("价格高于人民币等值¥288.00")
 
     keyword_points, matches = _keyword_score(row.get("title"), AMAZON_KEYWORDS, 20)
     score += keyword_points
@@ -244,7 +271,7 @@ def score_temu(row: dict[str, Any]) -> tuple[int, str]:
     if rank is not None and rank <= 50:
         score += 30 if rank <= 10 else 20
         reasons.append("Temu 排名靠前")
-    price = parse_number(row.get("price"))
+    price = price_to_usd(row.get("price"))
     if price is not None and price < 10:
         score += 25
         reasons.append("低价验证机会")

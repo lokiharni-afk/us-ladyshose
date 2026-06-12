@@ -33,6 +33,8 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 - `data/reviews.csv`：Top20 中 Amazon 商品的买家评价
 - `reports/YYYY-MM-DD.md`：每日中文爆款日报
 
+商品价格统一保存和展示为人民币。默认换算汇率为 `1 USD = 7.20 CNY`、`1 SGD = 5.30 CNY`，可通过环境变量 `USD_CNY_RATE` 和 `SGD_CNY_RATE` 调整。爆款评分仍按美元等值价格应用原有价格区间。
+
 日报包含今日美国女鞋趋势、TikTok 热度趋势、Amazon 验证款、Temu 低价跟款机会、Top 20 爆款机会榜、今日建议跟款方向、Temu 跟款机会判断和风险提醒。TikTok 当日无有效数据时，日报会明确提示页面反爬、地区限制、选择器失效或需要登录等可能原因。
 
 ### 日报选品建议

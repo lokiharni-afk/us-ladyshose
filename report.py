@@ -7,7 +7,7 @@ from typing import Any, Iterable
 
 from analyzer import TREND_WORDS
 from deduplicate import deduplicate_rows
-from score import hot_level, opportunity_level, parse_number
+from score import hot_level, opportunity_level, parse_number, price_to_usd
 
 FOLLOW_DIRECTIONS = [
     ("Recovery Slides 恢复拖鞋", ("recovery",), "recovery slides"),
@@ -79,13 +79,13 @@ def _top_rows(rows: list[dict[str, Any]], limit: int = 20) -> list[dict[str, Any
 
 
 def _temu_price_range(price: Any) -> str:
-    value = parse_number(price)
+    value = price_to_usd(price)
     if value is None:
         return "价格缺失，需人工判断"
     if value > 30:
-        return "9.99-19.99美元"
+        return "¥71.93-¥143.93"
     if value >= 15:
-        return "7.99-14.99美元"
+        return "¥57.53-¥107.93"
     return "谨慎跟款"
 
 
@@ -94,10 +94,10 @@ def _direction_price_range(matches: list[dict[str, Any]]) -> str:
         float(value)
         for row in matches
         if row.get("source") == "amazon_us"
-        if (value := parse_number(row.get("price"))) is not None
+        if (value := price_to_usd(row.get("price"))) is not None
     ]
     if not prices:
-        return "9.99-19.99美元（待价格验证）"
+        return "¥71.93-¥143.93（待价格验证）"
     return _temu_price_range(sum(prices) / len(prices))
 
 
@@ -164,14 +164,14 @@ def _temu_opportunity_table(rows: list[dict[str, Any]]) -> str:
 
 
 def _temu_follow_price_range(price: Any) -> str:
-    value = parse_number(price)
+    value = price_to_usd(price)
     if value is None:
         return "价格缺失，需人工判断"
     if value > 30:
-        return "9.99-19.99美元"
+        return "¥71.93-¥143.93"
     if value >= 15:
-        return "7.99-14.99美元"
-    return "6.99-12.99美元"
+        return "¥57.53-¥107.93"
+    return "¥50.33-¥93.53"
 
 
 def _temu_search_keyword(title: Any) -> str:
