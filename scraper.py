@@ -188,6 +188,8 @@ async def collect_all(run_date: str) -> tuple[list[dict[str, Any]], list[str]]:
                     warnings.append(message)
                 else:
                     rows.extend(result)
+        for row in rows:
+            row["date"] = run_date
         await context.close()
         await browser.close()
     return rows, warnings

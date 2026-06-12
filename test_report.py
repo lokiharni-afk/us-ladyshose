@@ -148,6 +148,7 @@ def test_report_contains_keyword_trend_radar_and_history_warning():
             "today_count": 8,
             "average_3d": 4.0,
             "average_7d": 2.86,
+            "average_30d": 2.0,
             "trend_status": "快速上升",
             "action": "优先跟踪，可作为明日重点选品方向。",
         }
@@ -162,6 +163,7 @@ def test_report_contains_keyword_trend_radar_and_history_warning():
     )
 
     assert "## 关键词趋势雷达" in text
-    assert "| 关键词 | 今日出现次数 | 近3日均值 | 近7日均值 | 趋势状态 | 操作建议 |" in text
-    assert "recovery | 8 | 4.0 | 2.86 | 快速上升 | 优先跟踪，可作为明日重点选品方向。" in text
-    assert "历史数据不足7天，趋势判断仅供参考。" in text
+    assert "当前历史数据：3天" in text
+    assert "| 关键词 | 今日出现次数 | 近3日均值 | 近7日均值 | 近30日均值 | 趋势状态 | 操作建议 |" in text
+    assert "recovery | 8 | 4.0 | 2.86 | 2.0 | 快速上升 | 优先跟踪，可作为明日重点选品方向。" in text
+    assert "趋势结果仅供参考。" in text

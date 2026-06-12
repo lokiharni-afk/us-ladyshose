@@ -1,4 +1,4 @@
-"""Analyze historical keyword frequency trends from raw_data.csv."""
+"""Analyze keyword frequency trends from daily history snapshots."""
 
 from __future__ import annotations
 
@@ -47,9 +47,10 @@ def _trend_status(today_count: int, average_7d: float) -> str:
 def analyze_keyword_trends(
     rows: Iterable[dict[str, Any]],
     run_date: str,
+    snapshot_dates: Iterable[str] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     daily_counts: dict[str, Counter[str]] = defaultdict(Counter)
-    dates = set()
+    dates = {str(day) for day in (snapshot_dates or []) if str(day) <= run_date}
     for row in rows:
         row_date = str(row.get("date") or "")
         if not row_date or row_date > run_date:
@@ -63,17 +64,20 @@ def analyze_keyword_trends(
     ordered_dates = sorted(dates)
     recent_3 = ordered_dates[-3:]
     recent_7 = ordered_dates[-7:]
+    recent_30 = ordered_dates[-30:]
     trend_rows = []
     for keyword in MONITORED_KEYWORDS:
         today_count = daily_counts[run_date][keyword]
         average_3d = round(sum(daily_counts[day][keyword] for day in recent_3) / len(recent_3), 2) if recent_3 else 0.0
         average_7d = round(sum(daily_counts[day][keyword] for day in recent_7) / len(recent_7), 2) if recent_7 else 0.0
+        average_30d = round(sum(daily_counts[day][keyword] for day in recent_30) / len(recent_30), 2) if recent_30 else 0.0
         status = _trend_status(today_count, average_7d)
         trend_rows.append({
             "keyword": keyword,
             "today_count": today_count,
             "average_3d": average_3d,
             "average_7d": average_7d,
+            "average_30d": average_30d,
             "trend_status": status,
             "action": ACTION_BY_STATUS[status],
         })
@@ -85,9 +89,18 @@ def analyze_keyword_trends(
     return trend_rows, metadata
 
 
-def analyze_trends_from_csv(path: str | Path, run_date: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    csv_path = Path(path)
-    if not csv_path.exists() or csv_path.stat().st_size == 0:
-        return analyze_keyword_trends([], run_date)
-    frame = pd.read_csv(csv_path).where(pd.notna, None)
-    return analyze_keyword_trends(frame.to_dict("records"), run_date)
+def analyze_trends_from_history(
+    history_dir: str | Path,
+    run_date: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    snapshot_dates: list[str] = []
+    directory = Path(history_dir)
+    if directory.exists():
+        for csv_path in sorted(directory.glob("*.csv")):
+            if csv_path.stem > run_date or csv_path.stat().st_size == 0:
+                continue
+            snapshot_dates.append(csv_path.stem)
+            frame = pd.read_csv(csv_path).where(pd.notna, None)
+            rows.extend(frame.to_dict("records"))
+    return analyze_keyword_trends(rows, run_date, snapshot_dates)

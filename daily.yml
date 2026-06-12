@@ -1,0 +1,45 @@
+name: Daily US Women Shoes Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Beijing 09:00 = UTC 01:00
+    - cron: "0 1 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run monitor
+        run: python main.py
+
+      - name: Commit and push generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/raw_data.csv data/history/*.csv reports/*.md
+          if git diff --cached --quiet; then
+            echo "No generated file changes to commit."
+          else
+            git commit -m "data: update daily women shoes report"
+            git push
+          fi

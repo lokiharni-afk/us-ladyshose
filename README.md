@@ -28,7 +28,8 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 
 ## 输出
 
-- `data/raw_data.csv`：历史原始数据与评分，按日期、平台和链接去重
+- `data/raw_data.csv`：当天最新采集、评分和去重结果
+- `data/history/YYYY-MM-DD.csv`：每日历史快照，用于趋势分析
 - `reports/YYYY-MM-DD.md`：每日中文爆款日报
 
 日报包含今日美国女鞋趋势、TikTok 热度趋势、Amazon 验证款、Temu 低价跟款机会、Top 20 爆款机会榜、今日建议跟款方向、Temu 跟款机会判断和风险提醒。TikTok 当日无有效数据时，日报会明确提示页面反爬、地区限制、选择器失效或需要登录等可能原因。
@@ -52,9 +53,18 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 
 ### 关键词趋势雷达
 
-`trend_analyzer.py` 每次运行后读取完整的 `data/raw_data.csv` 历史数据，按日期统计 recovery、orthopedic、arch support、cloud、platform、comfort、soft、beach、summer、slides、wedge、flip flops 和 sandals 的标题出现次数。
+`trend_analyzer.py` 每次运行后读取 `data/history/*.csv` 的全部每日快照，按日期统计 recovery、orthopedic、arch support、cloud、platform、comfort、soft、beach、summer、slides、wedge、flip flops 和 sandals 的标题出现次数。
 
-日报展示今日出现次数、近 3 日均值、近 7 日均值、趋势状态和操作建议。今日次数超过近 7 日均值 1.5 倍为快速上升，超过 1.1 倍为小幅上升，达到 0.8 倍为稳定，否则为下降。历史数据不足 7 天时仍正常运行，并提示趋势判断仅供参考。
+日报展示当前历史样本天数、今日出现次数、近 3 日均值、近 7 日均值、近 30 日均值、趋势状态和操作建议。今日次数超过近 7 日均值 1.5 倍为快速上升，超过 1.1 倍为小幅上升，达到 0.8 倍为稳定，否则为下降。历史数据不足 7 天时仍正常运行，并提示趋势结果仅供参考。
+
+### 每日数据快照
+
+每次运行会将当天去重后的最新数据同时写入：
+
+- `data/raw_data.csv`
+- `data/history/YYYY-MM-DD.csv`
+
+`raw_data.csv` 始终表示最新一天的数据；日期快照用于形成真实的 3 天、7 天和 30 天趋势。GitHub Actions 会自动提交最新数据、每日快照和日报。
 
 ## 本地运行
 

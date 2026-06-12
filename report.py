@@ -235,20 +235,22 @@ def _keyword_trend_radar(
     trend_rows: list[dict[str, Any]],
     metadata: dict[str, Any],
 ) -> str:
-    warning = "历史数据不足7天，趋势判断仅供参考。\n\n" if metadata.get("insufficient_history") else ""
+    history_days = int(metadata.get("history_days") or 0)
+    summary = f"当前历史数据：{history_days}天\n\n"
+    warning = "趋势结果仅供参考。\n\n" if metadata.get("insufficient_history") else ""
     if not trend_rows:
-        return warning + "暂无关键词历史趋势数据。\n"
+        return summary + warning + "暂无关键词历史趋势数据。\n"
     lines = [
-        "| 关键词 | 今日出现次数 | 近3日均值 | 近7日均值 | 趋势状态 | 操作建议 |",
-        "|---|---:|---:|---:|---|---|",
+        "| 关键词 | 今日出现次数 | 近3日均值 | 近7日均值 | 近30日均值 | 趋势状态 | 操作建议 |",
+        "|---|---:|---:|---:|---:|---|---|",
     ]
     for row in trend_rows:
         lines.append(
             f"| {row.get('keyword', '')} | {row.get('today_count', 0)} | "
             f"{row.get('average_3d', 0)} | {row.get('average_7d', 0)} | "
-            f"{row.get('trend_status', '')} | {row.get('action', '')} |"
+            f"{row.get('average_30d', 0)} | {row.get('trend_status', '')} | {row.get('action', '')} |"
         )
-    return warning + "\n".join(lines) + "\n"
+    return summary + warning + "\n".join(lines) + "\n"
 
 
 def build_report(
