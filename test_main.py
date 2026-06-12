@@ -1,4 +1,4 @@
-from main import merge_history, write_daily_snapshot, write_review_snapshot
+from main import merge_history, write_daily_snapshot, write_reviews
 
 
 def test_merge_history_deduplicates_same_daily_platform_url():
@@ -20,16 +20,12 @@ def test_write_daily_snapshot_writes_latest_and_dated_history(tmp_path):
     assert snapshot.exists()
 
 
-def test_write_review_snapshot_writes_required_columns(tmp_path):
-    path = write_review_snapshot(
-        tmp_path,
-        "2026-06-12",
+def test_write_reviews_writes_required_columns(tmp_path):
+    path = write_reviews(
+        tmp_path / "reviews.csv",
         [{"date": "2026-06-12", "source": "amazon_us", "product_title": "Slides"}],
     )
 
     header = path.read_text(encoding="utf-8-sig").splitlines()[0]
-    assert path == tmp_path / "2026-06-12.csv"
-    assert header == (
-        "date,source,product_title,product_url,review_type,review_rating,"
-        "review_title,review_text,review_date,verified_purchase,helpful_count"
-    )
+    assert path == tmp_path / "reviews.csv"
+    assert header == "product_title,review_text,review_rating,review_date"

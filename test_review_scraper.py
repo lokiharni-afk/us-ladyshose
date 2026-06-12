@@ -14,16 +14,11 @@ def test_parse_amazon_reviews_extracts_required_fields():
     """
     rows = parse_amazon_reviews(
         html,
-        "2026-06-12",
-        "positive",
         "Recovery Slides",
-        "https://www.amazon.com/dp/A1",
-        5,
+        10,
     )
 
-    assert rows[0]["source"] == "amazon_us"
-    assert rows[0]["review_type"] == "positive"
+    assert rows[0]["product_title"] == "Recovery Slides"
     assert rows[0]["review_rating"] == "5.0"
-    assert rows[0]["verified_purchase"] is True
-    assert rows[0]["helpful_count"] == 12
-
+    assert rows[0]["review_text"] == "Comfortable and soft."
+    assert rows[0]["review_date"] == "Reviewed in the United States on June 1, 2026"

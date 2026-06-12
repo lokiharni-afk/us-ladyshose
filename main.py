@@ -24,7 +24,7 @@ DATA_DIR = ROOT / "data"
 DATA_PATH = DATA_DIR / "raw_data.csv"
 HISTORY_DIR = DATA_DIR / "history"
 REPORTS_DIR = ROOT / "reports"
-REVIEWS_DIR = DATA_DIR / "reviews"
+REVIEWS_PATH = DATA_DIR / "reviews.csv"
 
 COLUMNS = [
     "date", "source", "data_type", "list_type", "keyword", "rank", "title",
@@ -33,9 +33,7 @@ COLUMNS = [
     "hot_score", "reason",
 ]
 REVIEW_COLUMNS = [
-    "date", "source", "product_title", "product_url", "review_type",
-    "review_rating", "review_title", "review_text", "review_date",
-    "verified_purchase", "helpful_count",
+    "product_title", "review_text", "review_rating", "review_date",
 ]
 
 
@@ -72,8 +70,7 @@ def write_daily_snapshot(data_dir: Path, run_date: str, rows: list[dict[str, Any
     return latest_path, snapshot_path
 
 
-def write_review_snapshot(reviews_dir: Path, run_date: str, rows: list[dict[str, Any]]) -> Path:
-    path = reviews_dir / f"{run_date}.csv"
+def write_reviews(path: Path, rows: list[dict[str, Any]]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame(rows)
     for column in REVIEW_COLUMNS:
@@ -90,7 +87,7 @@ def _attach_review_signals(
     enriched = []
     for original in rows:
         row = dict(original)
-        insight = insight_map.get(str(row.get("product_url") or ""))
+        insight = insight_map.get(str(row.get("title") or ""))
         if insight:
             row["review_positive_count"] = insight.get("positive_signal_count", 0)
             row["review_negative_count"] = insight.get("negative_signal_count", 0)
@@ -106,7 +103,6 @@ async def run() -> None:
     review_products = select_top20_amazon(initial_deduplicated)
     reviews, review_warnings = await collect_amazon_reviews(
         review_products,
-        run_date,
         headless=os.getenv("HEADLESS", "true").lower() != "false",
     )
     warnings.extend(review_warnings)
@@ -114,7 +110,7 @@ async def run() -> None:
     rescored = analyze_rows(_attach_review_signals(analyzed, review_insight_map))
     deduplicated, dedup_stats = deduplicate_rows(rescored)
     latest_path, snapshot_path = write_daily_snapshot(DATA_DIR, run_date, deduplicated)
-    reviews_path = write_review_snapshot(REVIEWS_DIR, run_date, reviews)
+    reviews_path = write_reviews(REVIEWS_PATH, reviews)
     trend_rows, trend_metadata = analyze_trends_from_history(HISTORY_DIR, run_date)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     (REPORTS_DIR / f"{run_date}.md").write_text(

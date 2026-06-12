@@ -257,49 +257,36 @@ def _review_insights_section(review_insights: list[dict[str, Any]]) -> str:
     if not review_insights:
         return "今日评价采集失败或无可用评价。\n"
 
-    def collect(field: str) -> list[str]:
+    def collect_list(field: str) -> list[str]:
         counts: Counter[str] = Counter()
         for insight in review_insights:
-            value = str(insight.get(field) or "")
-            counts.update(part.strip() for part in value.split("、") if part.strip() and "暂无" not in part)
+            value = insight.get(field) or []
+            counts.update(str(item) for item in value if item)
         return [item for item, _ in counts.most_common(8)]
 
-    positives = collect("positive_summary")
-    negatives = collect("negative_summary")
-    sizing = collect("sizing_insight")
-    quality = collect("quality_risk")
-    scenarios = collect("usage_scenario")
-    suggestions = [
-        str(insight.get("temu_listing_suggestion") or "")
-        for insight in review_insights
-        if insight.get("temu_listing_suggestion")
-    ]
+    positives = collect_list("positive_keywords")
+    negatives = collect_list("negative_keywords")
+    frequent = collect_list("frequent_review_keywords")
+    temu_keywords = collect_list("temu_opportunity_keywords")
 
     def bullets(items: list[str], fallback: str) -> str:
         return "\n".join(f"- {item}" for item in items) if items else f"- {fallback}"
 
-    return f"""### 买家最喜欢的点
+    return f"""### 买家最喜欢
 
-{bullets(positives, "暂无明确正面高频词")}
+{bullets(positives, "暂无明确正面关键词")}
 
-### 买家最常抱怨的问题
+### 买家吐槽
 
-{bullets(negatives, "暂无明显集中差评")}
+{bullets(negatives, "暂无明确负面关键词")}
 
-### 尺码、质量与使用场景
+### 高频评价关键词
 
-- 尺码反馈：{"、".join(sizing) or "暂无明确尺码反馈"}
-- 质量风险：{"、".join(quality) or "暂无明显质量风险"}
-- 使用场景：{"、".join(scenarios) or "暂无明确使用场景"}
+{bullets(frequent, "暂无高频评价关键词")}
 
-### Temu 上架优化建议
+### Temu机会关键词
 
-- 标题应该突出：{"、".join(positives[:5]) or "舒适、软底、足弓支撑等核心卖点"}
-- 主图应该突出：舒适结构、软底、足弓支撑和使用场景。
-- 详情页应该解释：{"、".join(quality[:5]) or "材质、耐用性和防滑能力"}
-- 尺码表应该提醒：{"、".join(sizing[:5]) or "真实尺码与脚型适配"}
-- 差评问题要避免：{"、".join(negatives[:5]) or "尺码、质量、异味和防滑问题"}
-- 商品级建议：{suggestions[0] if suggestions else "暂无商品级建议"}
+{bullets(temu_keywords, "暂无明确 Temu 机会关键词")}
 """
 
 

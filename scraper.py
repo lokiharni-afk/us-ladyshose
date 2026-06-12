@@ -140,8 +140,8 @@ async def _load_and_parse(
     async with semaphore:
         page: Page = await context.new_page()
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-            for _ in range(8):
+            await page.goto(url, wait_until="domcontentloaded", timeout=35_000)
+            for _ in range(5):
                 await page.mouse.wheel(0, 2500)
                 await page.wait_for_timeout(750)
             content = (await page.content()).lower()

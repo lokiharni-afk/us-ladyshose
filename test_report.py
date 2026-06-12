@@ -172,22 +172,21 @@ def test_report_contains_keyword_trend_radar_and_history_warning():
 def test_report_contains_buyer_review_insights_and_empty_fallback():
     insights = [{
         "product_title": "Recovery Slides",
-        "positive_summary": "舒适、软底、轻便",
-        "negative_summary": "尺码偏小、鞋底硬",
-        "sizing_insight": "偏小",
-        "quality_risk": "鞋底硬",
-        "usage_scenario": "walking、recovery",
-        "product_improvement_suggestion": "优化尺码与鞋底柔软度",
-        "temu_listing_suggestion": "标题突出舒适和软底；尺码表提醒偏小",
+        "positive_keywords": ["comfortable", "arch support", "lightweight"],
+        "negative_keywords": ["runs small", "narrow fit"],
+        "frequent_review_keywords": ["comfortable", "arch support", "runs small"],
+        "temu_opportunity_keywords": ["cloud", "recovery", "orthopedic", "arch support"],
     }]
 
     text = build_report("2026-06-12", [], [], review_insights=insights)
     empty = build_report("2026-06-12", [], [], review_insights=[])
 
     assert "## 买家评价洞察" in text
-    assert "### 买家最喜欢的点" in text
-    assert "### 买家最常抱怨的问题" in text
-    assert "### Temu 上架优化建议" in text
-    assert "舒适" in text
-    assert "尺码偏小" in text
+    assert "### 买家最喜欢" in text
+    assert "### 买家吐槽" in text
+    assert "### 高频评价关键词" in text
+    assert "### Temu机会关键词" in text
+    assert "comfortable" in text
+    assert "runs small" in text
+    assert "recovery" in text
     assert "今日评价采集失败或无可用评价" in empty
