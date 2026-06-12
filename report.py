@@ -17,6 +17,15 @@ FOLLOW_DIRECTIONS = [
 ]
 
 BRAND_WORDS = ("Crocs", "OOFOS", "Skechers", "Clarks", "REEF", "Amazon Essentials")
+TEMU_PRIORITY_WORDS = ("recovery", "orthopedic", "arch support", "cloud")
+TEMU_SEARCH_PATTERNS = [
+    (("orthopedic", "arch support"), "orthopedic arch support sandals"),
+    (("recovery",), "recovery slides"),
+    (("cloud",), "cloud slides"),
+    (("platform",), "platform sandals"),
+    (("beach",), "beach sandals"),
+    (("flip flops",), "women flip flops"),
+]
 
 
 def _table(rows: list[dict[str, Any]], limit: int = 10) -> str:
@@ -153,6 +162,61 @@ def _temu_opportunity_table(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _temu_follow_price_range(price: Any) -> str:
+    value = parse_number(price)
+    if value is None:
+        return "价格缺失，需人工判断"
+    if value > 30:
+        return "9.99-19.99美元"
+    if value >= 15:
+        return "7.99-14.99美元"
+    return "6.99-12.99美元"
+
+
+def _temu_search_keyword(title: Any) -> str:
+    text = str(title or "").lower()
+    for required_words, keyword in TEMU_SEARCH_PATTERNS:
+        if all(word in text for word in required_words):
+            return keyword
+    words = [word for word in text.split() if word.isalpha()][:4]
+    return " ".join(words) or "women sandals"
+
+
+def _temu_follow_list(rows: list[dict[str, Any]]) -> str:
+    amazon_rows = [row for row in _top_rows(rows) if row.get("source") == "amazon_us"]
+    if not amazon_rows:
+        return "Top20 中暂无 Amazon 商品，今日无法生成 Temu 跟款清单。\n"
+
+    keywords = [_temu_search_keyword(row.get("title")) for row in amazon_rows]
+    competition_counts = Counter(keywords)
+    lines = [
+        "| 关键词 | Amazon价格 | 建议Temu售价 | 竞争等级 | 跟款优先级 | 原因 |",
+        "|---|---:|---|---|---|---|",
+    ]
+    for row, keyword in zip(amazon_rows, keywords):
+        title = str(row.get("title") or "")
+        title_lower = title.lower()
+        brand = next((brand for brand in BRAND_WORDS if brand.lower() in title_lower), None)
+        priority_matches = [word for word in TEMU_PRIORITY_WORDS if word in title_lower]
+        count = competition_counts[keyword]
+        competition = "高" if count >= 5 else "中" if count >= 2 else "低"
+        if brand:
+            priority = "低"
+            reason = f"包含品牌词 {brand}，跟款优先级低"
+        elif priority_matches:
+            priority = "高"
+            reason = f"标题包含高机会词 {'、'.join(priority_matches)}"
+        else:
+            priority = "中"
+            reason = "未命中品牌词或高机会词，建议常规观察"
+        price = str(row.get("price") or "-").replace("|", " ")
+        lines.append(
+            f"| {keyword} | {price} | {_temu_follow_price_range(row.get('price'))} | "
+            f"{competition} | {priority} | {reason} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def _level_summary(rows: list[dict[str, Any]]) -> str:
     counts = Counter(hot_level(row.get("hot_score")) for row in rows)
     return f"- S级爆款：{counts['S级爆款']} 条\n- A级爆款：{counts['A级爆款']} 条"
@@ -196,6 +260,10 @@ def build_report(run_date: str, rows: list[dict[str, Any]], warnings: list[str] 
 ## Temu 跟款机会判断
 
 {_temu_opportunity_table(rows)}
+
+## Temu跟款清单
+
+{_temu_follow_list(rows)}
 
 ## 风险提醒
 

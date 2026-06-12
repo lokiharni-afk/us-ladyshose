@@ -83,6 +83,37 @@ def test_report_builds_temu_opportunity_from_brand_and_amazon_price():
     assert "高 | 9.99-19.99美元" in text
 
 
+def test_report_builds_temu_follow_list_from_top20():
+    rows = [
+        {
+            "source": "amazon_us", "title": "Generic Recovery Slides", "price": "$35.00",
+            "hot_score": 95, "reason": "排名靠前",
+        },
+        {
+            "source": "amazon_us", "title": "OOFOS Recovery Slides", "price": "$60.00",
+            "hot_score": 92, "reason": "排名靠前",
+        },
+        {
+            "source": "amazon_us", "title": "Generic Orthopedic Arch Support Sandals", "price": "$25.00",
+            "hot_score": 90, "reason": "排名靠前",
+        },
+        {
+            "source": "amazon_us", "title": "Generic Beach Sandals", "price": "$12.00",
+            "hot_score": 85, "reason": "排名靠前",
+        },
+    ]
+
+    text = build_report("2026-06-12", rows, [])
+
+    assert "## Temu跟款清单" in text
+    assert "| 关键词 | Amazon价格 | 建议Temu售价 | 竞争等级 | 跟款优先级 | 原因 |" in text
+    assert "recovery slides | $35.00 | 9.99-19.99美元 | 中 | 高" in text
+    assert "OOFOS Recovery Slides" not in text.split("## Temu跟款清单", 1)[1].split("## 风险提醒", 1)[0]
+    assert "品牌词 OOFOS，跟款优先级低" in text
+    assert "orthopedic arch support sandals | $25.00 | 7.99-14.99美元 | 低 | 高" in text
+    assert "beach sandals | $12.00 | 6.99-12.99美元 | 低 | 中" in text
+
+
 def test_report_explains_when_tiktok_has_no_data():
     text = build_report("2026-06-11", [], [])
     assert "TikTok 今日未采集到有效数据，可能原因：页面反爬、地区限制、选择器失效或需要登录。" in text

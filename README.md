@@ -39,6 +39,10 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 - 每个方向展示英文关键词、推荐原因、建议售价区间和风险等级。
 - Temu 跟款机会判断会识别 Crocs、OOFOS、Skechers、Clarks、REEF 和 Amazon Essentials 等品牌词；命中品牌词时标记为“不建议”。
 - 非品牌 Amazon 商品按价格给出 Temu 建议：高于 30 美元建议 9.99-19.99 美元，15-30 美元建议 7.99-14.99 美元，低于 15 美元标记为谨慎跟款。
+- Temu跟款清单基于 Top20 中的 Amazon 商品，输出搜索关键词、Amazon 价格、建议 Temu 售价、竞争等级、跟款优先级和原因。
+- 清单中包含 recovery、orthopedic、arch support 或 cloud 的商品优先级为高；包含 OOFOS、Crocs、Clarks 或 Skechers 等品牌词时优先级降为低。
+- Temu 清单建议售价：Amazon 高于 30 美元对应 9.99-19.99 美元，15-30 美元对应 7.99-14.99 美元，低于 15 美元对应 6.99-12.99 美元。
+- 竞争等级按 Top20 中相同 Temu 搜索关键词的出现数量判断：5 条以上为高、2-4 条为中、1 条为低。
 
 ## 本地运行
 
