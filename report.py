@@ -6,6 +6,7 @@ from collections import Counter
 from typing import Any, Iterable
 
 from analyzer import TREND_WORDS
+from deduplicate import deduplicate_rows
 from score import hot_level, opportunity_level, parse_number
 
 FOLLOW_DIRECTIONS = [
@@ -222,8 +223,23 @@ def _level_summary(rows: list[dict[str, Any]]) -> str:
     return f"- S级爆款：{counts['S级爆款']} 条\n- A级爆款：{counts['A级爆款']} 条"
 
 
-def build_report(run_date: str, rows: list[dict[str, Any]], warnings: list[str] | None = None) -> str:
+def _deduplication_summary(stats: dict[str, int]) -> str:
+    return (
+        f"- 本次去重数量：{stats['removed_count']}\n"
+        f"- 原始记录：{stats['original_count']}\n"
+        f"- 去重后记录：{stats['deduplicated_count']}"
+    )
+
+
+def build_report(
+    run_date: str,
+    rows: list[dict[str, Any]],
+    warnings: list[str] | None = None,
+    dedup_stats: dict[str, int] | None = None,
+) -> str:
     warnings = warnings or []
+    rows, report_stats = deduplicate_rows(rows)
+    dedup_stats = dedup_stats or report_stats
     amazon = [row for row in rows if row.get("source") == "amazon_us"]
     tiktok = [row for row in rows if row.get("source") == "tiktok_us"]
     temu = [row for row in rows if row.get("source") == "temu_us"]
@@ -238,6 +254,10 @@ def build_report(run_date: str, rows: list[dict[str, Any]], warnings: list[str] 
 ## 爆款等级统计
 
 {_level_summary(rows)}
+
+## 去重统计
+
+{_deduplication_summary(dedup_stats)}
 
 ## TikTok 热度趋势
 

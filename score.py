@@ -29,6 +29,9 @@ TIKTOK_KEYWORDS = {
     "women sandals": 3,
 }
 
+KNOWN_BRANDS = ("Amazon Essentials", "CloudStep", "Crocs", "OOFOS", "Skechers", "Clarks", "REEF")
+BRAND_STOP_WORDS = {"women", "womens", "woman", "ladies", "men", "mens", "unisex", "generic"}
+
 
 def parse_number(value: Any) -> float | int | None:
     if value is None or (isinstance(value, float) and math.isnan(value)):
@@ -42,6 +45,16 @@ def parse_number(value: Any) -> float | int | None:
     number = float(match.group(1))
     number *= {"": 1, "K": 1_000, "M": 1_000_000, "B": 1_000_000_000}[match.group(2)]
     return int(number) if number.is_integer() else number
+
+
+def extract_brand(title: Any) -> str:
+    text = str(title or "").strip()
+    lower = text.lower()
+    for brand in KNOWN_BRANDS:
+        if brand.lower() in lower:
+            return brand.lower()
+    words = re.findall(r"[a-z0-9]+", lower)
+    return next((word for word in words if word not in BRAND_STOP_WORDS), "")
 
 
 def opportunity_level(score: Any) -> str:

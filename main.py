@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from analyzer import analyze_rows
+from deduplicate import deduplicate_rows
 from report import build_report
 from scraper import collect_all
 
@@ -56,13 +57,18 @@ async def run() -> None:
     run_date = os.getenv("RUN_DATE") or datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
     rows, warnings = await collect_all(run_date)
     analyzed = analyze_rows(rows)
-    history = analyze_rows(merge_history(_read_history(), rows))
+    deduplicated, dedup_stats = deduplicate_rows(analyzed)
+    history, _ = deduplicate_rows(analyze_rows(merge_history(_read_history(), rows)))
     _write_history(history)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    (REPORTS_DIR / f"{run_date}.md").write_text(build_report(run_date, analyzed, warnings), encoding="utf-8")
-    amazon_count = sum(row.get("source") == "amazon_us" for row in analyzed)
-    tiktok_count = sum(row.get("source") == "tiktok_us" for row in analyzed)
-    print(f"Collected Amazon: {amazon_count}, TikTok: {tiktok_count}, total: {len(analyzed)}")
+    (REPORTS_DIR / f"{run_date}.md").write_text(
+        build_report(run_date, deduplicated, warnings, dedup_stats),
+        encoding="utf-8",
+    )
+    amazon_count = sum(row.get("source") == "amazon_us" for row in deduplicated)
+    tiktok_count = sum(row.get("source") == "tiktok_us" for row in deduplicated)
+    print(f"Collected Amazon: {amazon_count}, TikTok: {tiktok_count}, total after deduplication: {len(deduplicated)}")
+    print(f"Deduplicated {dedup_stats['removed_count']} of {dedup_stats['original_count']} records")
     print(f"Wrote {DATA_PATH} and reports/{run_date}.md")
 
 
