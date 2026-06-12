@@ -117,3 +117,51 @@ def test_report_builds_temu_follow_list_from_top20():
 def test_report_explains_when_tiktok_has_no_data():
     text = build_report("2026-06-11", [], [])
     assert "TikTok 今日未采集到有效数据，可能原因：页面反爬、地区限制、选择器失效或需要登录。" in text
+
+
+def test_report_deduplicates_top20_and_shows_deduplication_stats():
+    rows = [
+        {
+            "source": "amazon_us", "title": "CloudStep Women's Recovery Cloud Slides",
+            "price": "$19.99", "hot_score": 82, "reason": "旧记录",
+        },
+        {
+            "source": "amazon_us", "title": "CloudStep Womens Recovery Cloud Slides",
+            "price": "$21.99", "hot_score": 91, "reason": "最高分记录",
+        },
+    ]
+
+    text = build_report("2026-06-12", rows, [])
+    top20 = text.split("## Top 20 爆款机会榜", 1)[1].split("## 今日建议跟款方向", 1)[0]
+
+    assert "本次去重数量：1" in text
+    assert "原始记录：2" in text
+    assert "去重后记录：1" in text
+    assert "最高分记录" in top20
+    assert "旧记录" not in top20
+
+
+def test_report_contains_keyword_trend_radar_and_history_warning():
+    trends = [
+        {
+            "keyword": "recovery",
+            "today_count": 8,
+            "average_3d": 4.0,
+            "average_7d": 2.86,
+            "trend_status": "快速上升",
+            "action": "优先跟踪，可作为明日重点选品方向。",
+        }
+    ]
+
+    text = build_report(
+        "2026-06-12",
+        [],
+        [],
+        trend_rows=trends,
+        trend_metadata={"history_days": 3, "insufficient_history": True},
+    )
+
+    assert "## 关键词趋势雷达" in text
+    assert "| 关键词 | 今日出现次数 | 近3日均值 | 近7日均值 | 趋势状态 | 操作建议 |" in text
+    assert "recovery | 8 | 4.0 | 2.86 | 快速上升 | 优先跟踪，可作为明日重点选品方向。" in text
+    assert "历史数据不足7天，趋势判断仅供参考。" in text

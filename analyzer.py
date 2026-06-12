@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from score import parse_number, score_row
+from trend_analyzer import MONITORED_KEYWORDS
 
-TREND_WORDS = ("platform", "cloud", "recovery", "orthopedic", "comfort", "arch support", "soft", "summer", "beach", "wedge", "slides")
+TREND_WORDS = MONITORED_KEYWORDS
 
 
 def analyze_rows(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:

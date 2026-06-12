@@ -231,13 +231,37 @@ def _deduplication_summary(stats: dict[str, int]) -> str:
     )
 
 
+def _keyword_trend_radar(
+    trend_rows: list[dict[str, Any]],
+    metadata: dict[str, Any],
+) -> str:
+    warning = "历史数据不足7天，趋势判断仅供参考。\n\n" if metadata.get("insufficient_history") else ""
+    if not trend_rows:
+        return warning + "暂无关键词历史趋势数据。\n"
+    lines = [
+        "| 关键词 | 今日出现次数 | 近3日均值 | 近7日均值 | 趋势状态 | 操作建议 |",
+        "|---|---:|---:|---:|---|---|",
+    ]
+    for row in trend_rows:
+        lines.append(
+            f"| {row.get('keyword', '')} | {row.get('today_count', 0)} | "
+            f"{row.get('average_3d', 0)} | {row.get('average_7d', 0)} | "
+            f"{row.get('trend_status', '')} | {row.get('action', '')} |"
+        )
+    return warning + "\n".join(lines) + "\n"
+
+
 def build_report(
     run_date: str,
     rows: list[dict[str, Any]],
     warnings: list[str] | None = None,
     dedup_stats: dict[str, int] | None = None,
+    trend_rows: list[dict[str, Any]] | None = None,
+    trend_metadata: dict[str, Any] | None = None,
 ) -> str:
     warnings = warnings or []
+    trend_rows = trend_rows or []
+    trend_metadata = trend_metadata or {"history_days": 0, "insufficient_history": True}
     rows, report_stats = deduplicate_rows(rows)
     dedup_stats = dedup_stats or report_stats
     amazon = [row for row in rows if row.get("source") == "amazon_us"]
@@ -258,6 +282,10 @@ def build_report(
 ## 去重统计
 
 {_deduplication_summary(dedup_stats)}
+
+## 关键词趋势雷达
+
+{_keyword_trend_radar(trend_rows, trend_metadata)}
 
 ## TikTok 热度趋势
 

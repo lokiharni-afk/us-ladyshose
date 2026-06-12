@@ -50,6 +50,12 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 
 日报会展示本次去重数量、原始记录数和去重后记录数。Top20 爆款机会榜会再次执行去重保护，禁止出现重复商品。价格缺失时不会判定为同款，避免误删 TikTok 趋势内容；不同日期的记录会保留，用于历史趋势分析。
 
+### 关键词趋势雷达
+
+`trend_analyzer.py` 每次运行后读取完整的 `data/raw_data.csv` 历史数据，按日期统计 recovery、orthopedic、arch support、cloud、platform、comfort、soft、beach、summer、slides、wedge、flip flops 和 sandals 的标题出现次数。
+
+日报展示今日出现次数、近 3 日均值、近 7 日均值、趋势状态和操作建议。今日次数超过近 7 日均值 1.5 倍为快速上升，超过 1.1 倍为小幅上升，达到 0.8 倍为稳定，否则为下降。历史数据不足 7 天时仍正常运行，并提示趋势判断仅供参考。
+
 ## 本地运行
 
 需要 Python 3.11。

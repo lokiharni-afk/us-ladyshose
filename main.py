@@ -15,6 +15,7 @@ from analyzer import analyze_rows
 from deduplicate import deduplicate_rows
 from report import build_report
 from scraper import collect_all
+from trend_analyzer import analyze_trends_from_csv
 
 ROOT = Path(__file__).resolve().parent
 DATA_PATH = ROOT / "data" / "raw_data.csv"
@@ -60,9 +61,17 @@ async def run() -> None:
     deduplicated, dedup_stats = deduplicate_rows(analyzed)
     history, _ = deduplicate_rows(analyze_rows(merge_history(_read_history(), rows)))
     _write_history(history)
+    trend_rows, trend_metadata = analyze_trends_from_csv(DATA_PATH, run_date)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     (REPORTS_DIR / f"{run_date}.md").write_text(
-        build_report(run_date, deduplicated, warnings, dedup_stats),
+        build_report(
+            run_date,
+            deduplicated,
+            warnings,
+            dedup_stats,
+            trend_rows,
+            trend_metadata,
+        ),
         encoding="utf-8",
     )
     amazon_count = sum(row.get("source") == "amazon_us" for row in deduplicated)
