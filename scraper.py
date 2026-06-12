@@ -33,8 +33,15 @@ LOGGER = logging.getLogger(__name__)
 
 
 def select_top20_amazon(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    top20 = sorted(rows, key=lambda row: float(row.get("hot_score") or 0), reverse=True)[:20]
-    return [row for row in top20 if row.get("source") == "amazon_us" and row.get("product_url")]
+    amazon_rows = [
+        row for row in rows
+        if row.get("source") == "amazon_us" and row.get("product_url")
+    ]
+    return sorted(
+        amazon_rows,
+        key=lambda row: float(row.get("hot_score") or 0),
+        reverse=True,
+    )[:20]
 
 
 def _text(node: Tag | None, selectors: list[str]) -> str | None:

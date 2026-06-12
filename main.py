@@ -97,10 +97,13 @@ def _attach_review_signals(
 
 async def run() -> None:
     run_date = os.getenv("RUN_DATE") or datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+    write_reviews(REVIEWS_PATH, [])
+    print(f"Initialized review output: {REVIEWS_PATH}", flush=True)
     rows, warnings = await collect_all(run_date)
     analyzed = analyze_rows(rows)
     initial_deduplicated, _ = deduplicate_rows(analyzed)
     review_products = select_top20_amazon(initial_deduplicated)
+    print(f"Starting review collection for {len(review_products)} Amazon products", flush=True)
     reviews, review_warnings = await collect_amazon_reviews(
         review_products,
         headless=os.getenv("HEADLESS", "true").lower() != "false",
