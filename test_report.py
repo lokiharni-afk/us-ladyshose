@@ -167,3 +167,27 @@ def test_report_contains_keyword_trend_radar_and_history_warning():
     assert "| 关键词 | 今日出现次数 | 近3日均值 | 近7日均值 | 近30日均值 | 趋势状态 | 操作建议 |" in text
     assert "recovery | 8 | 4.0 | 2.86 | 2.0 | 快速上升 | 优先跟踪，可作为明日重点选品方向。" in text
     assert "趋势结果仅供参考。" in text
+
+
+def test_report_contains_buyer_review_insights_and_empty_fallback():
+    insights = [{
+        "product_title": "Recovery Slides",
+        "positive_summary": "舒适、软底、轻便",
+        "negative_summary": "尺码偏小、鞋底硬",
+        "sizing_insight": "偏小",
+        "quality_risk": "鞋底硬",
+        "usage_scenario": "walking、recovery",
+        "product_improvement_suggestion": "优化尺码与鞋底柔软度",
+        "temu_listing_suggestion": "标题突出舒适和软底；尺码表提醒偏小",
+    }]
+
+    text = build_report("2026-06-12", [], [], review_insights=insights)
+    empty = build_report("2026-06-12", [], [], review_insights=[])
+
+    assert "## 买家评价洞察" in text
+    assert "### 买家最喜欢的点" in text
+    assert "### 买家最常抱怨的问题" in text
+    assert "### Temu 上架优化建议" in text
+    assert "舒适" in text
+    assert "尺码偏小" in text
+    assert "今日评价采集失败或无可用评价" in empty

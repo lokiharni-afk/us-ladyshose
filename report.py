@@ -253,6 +253,56 @@ def _keyword_trend_radar(
     return summary + warning + "\n".join(lines) + "\n"
 
 
+def _review_insights_section(review_insights: list[dict[str, Any]]) -> str:
+    if not review_insights:
+        return "今日评价采集失败或无可用评价。\n"
+
+    def collect(field: str) -> list[str]:
+        counts: Counter[str] = Counter()
+        for insight in review_insights:
+            value = str(insight.get(field) or "")
+            counts.update(part.strip() for part in value.split("、") if part.strip() and "暂无" not in part)
+        return [item for item, _ in counts.most_common(8)]
+
+    positives = collect("positive_summary")
+    negatives = collect("negative_summary")
+    sizing = collect("sizing_insight")
+    quality = collect("quality_risk")
+    scenarios = collect("usage_scenario")
+    suggestions = [
+        str(insight.get("temu_listing_suggestion") or "")
+        for insight in review_insights
+        if insight.get("temu_listing_suggestion")
+    ]
+
+    def bullets(items: list[str], fallback: str) -> str:
+        return "\n".join(f"- {item}" for item in items) if items else f"- {fallback}"
+
+    return f"""### 买家最喜欢的点
+
+{bullets(positives, "暂无明确正面高频词")}
+
+### 买家最常抱怨的问题
+
+{bullets(negatives, "暂无明显集中差评")}
+
+### 尺码、质量与使用场景
+
+- 尺码反馈：{"、".join(sizing) or "暂无明确尺码反馈"}
+- 质量风险：{"、".join(quality) or "暂无明显质量风险"}
+- 使用场景：{"、".join(scenarios) or "暂无明确使用场景"}
+
+### Temu 上架优化建议
+
+- 标题应该突出：{"、".join(positives[:5]) or "舒适、软底、足弓支撑等核心卖点"}
+- 主图应该突出：舒适结构、软底、足弓支撑和使用场景。
+- 详情页应该解释：{"、".join(quality[:5]) or "材质、耐用性和防滑能力"}
+- 尺码表应该提醒：{"、".join(sizing[:5]) or "真实尺码与脚型适配"}
+- 差评问题要避免：{"、".join(negatives[:5]) or "尺码、质量、异味和防滑问题"}
+- 商品级建议：{suggestions[0] if suggestions else "暂无商品级建议"}
+"""
+
+
 def build_report(
     run_date: str,
     rows: list[dict[str, Any]],
@@ -260,10 +310,12 @@ def build_report(
     dedup_stats: dict[str, int] | None = None,
     trend_rows: list[dict[str, Any]] | None = None,
     trend_metadata: dict[str, Any] | None = None,
+    review_insights: list[dict[str, Any]] | None = None,
 ) -> str:
     warnings = warnings or []
     trend_rows = trend_rows or []
     trend_metadata = trend_metadata or {"history_days": 0, "insufficient_history": True}
+    review_insights = review_insights or []
     rows, report_stats = deduplicate_rows(rows)
     dedup_stats = dedup_stats or report_stats
     amazon = [row for row in rows if row.get("source") == "amazon_us"]
@@ -314,6 +366,10 @@ def build_report(
 ## Temu跟款清单
 
 {_temu_follow_list(rows)}
+
+## 买家评价洞察
+
+{_review_insights_section(review_insights)}
 
 ## 风险提醒
 

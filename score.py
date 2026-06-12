@@ -164,7 +164,22 @@ def score_amazon(row: dict[str, Any]) -> tuple[int, str]:
             score += 4
             reasons.append("评分达到4.0以上")
 
-    return min(100, score), _reason(reasons)
+    positive_reviews = int(parse_number(row.get("review_positive_count")) or 0)
+    negative_reviews = int(parse_number(row.get("review_negative_count")) or 0)
+    if positive_reviews >= 5:
+        score += 10
+        reasons.append("评价正面信号强，加10分")
+    elif positive_reviews >= 2:
+        score += 5
+        reasons.append("评价正面信号较强，加5分")
+    if negative_reviews >= 5:
+        score -= 15
+        reasons.append("评价负面风险高，扣15分")
+    elif negative_reviews >= 2:
+        score -= 5
+        reasons.append("评价存在负面风险，扣5分")
+
+    return max(0, min(100, score)), _reason(reasons)
 
 
 def score_tiktok(row: dict[str, Any]) -> tuple[int, str]:

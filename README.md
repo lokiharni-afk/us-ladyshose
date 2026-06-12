@@ -30,6 +30,7 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 
 - `data/raw_data.csv`：当天最新采集、评分和去重结果
 - `data/history/YYYY-MM-DD.csv`：每日历史快照，用于趋势分析
+- `data/reviews/YYYY-MM-DD.csv`：Top20 中 Amazon 商品的每日评价快照
 - `reports/YYYY-MM-DD.md`：每日中文爆款日报
 
 日报包含今日美国女鞋趋势、TikTok 热度趋势、Amazon 验证款、Temu 低价跟款机会、Top 20 爆款机会榜、今日建议跟款方向、Temu 跟款机会判断和风险提醒。TikTok 当日无有效数据时，日报会明确提示页面反爬、地区限制、选择器失效或需要登录等可能原因。
@@ -65,6 +66,19 @@ Amazon 和 Temu 每个任务最多保留前 50 条有效记录，TikTok 每个�
 - `data/history/YYYY-MM-DD.csv`
 
 `raw_data.csv` 始终表示最新一天的数据；日期快照用于形成真实的 3 天、7 天和 30 天趋势。GitHub Actions 会自动提交最新数据、每日快照和日报。
+
+### 买家评价洞察
+
+`review_scraper.py` 只对首次评分去重后的 Top20 爆款机会榜中的 Amazon 商品采集评价。每个商品最多采集 5 条 Top positive reviews、5 条 Top critical reviews 和 10 条 Recent reviews，并保存到 `data/reviews/YYYY-MM-DD.csv`。评价页面反爬、需要验证或无法访问时会返回空列表，不中断 Amazon、TikTok、Temu 主采集。
+
+`review_analyzer.py` 从评价中提取：
+
+- 买家喜欢的舒适、软底、轻便、足弓支撑、尺码标准和适合走路等卖点。
+- 尺码偏小、偏大、鞋型偏窄，以及异味、鞋底硬、易断、不耐穿等风险。
+- walking、beach、pool、travel、work、plantar fasciitis、recovery 等使用场景。
+- 产品改进建议和 Temu 标题、主图、详情页、尺码表优化建议。
+
+Amazon 评分会根据评价信号联动调整：正面信号较强加 5-10 分，负面风险较高扣 5-15 分，最终分数仍限制在 0-100。日报新增“买家评价洞察”；无可用评价时会明确提示“今日评价采集失败或无可用评价”。
 
 ## 本地运行
 
